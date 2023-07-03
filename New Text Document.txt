@@ -1,0 +1,32 @@
+answer = rows[0]["answer"]
+        answer_list.append(answer)
+        _answer = str(answer).strip().upper()
+
+        data = str(request.form["answer1"]).strip().upper()
+        user_ans.append(data)
+
+        communication = estimate_communication('audio.wav', data)
+        
+        default_ans = list()
+        for x in answer_list:
+            default_ans.append(str(x).strip().upper())
+        total_score = 0
+        status = None
+        if session["test_id"] == "1":
+            subjective_generator = SubjectiveTest(session["filepath"])
+            if _answer == data:
+                answer_score = 10.0
+            else:
+                answer_score = subjective_generator.evaluate_subjective_answer(_answer, data)
+            total_score += answer_score
+        total_score = round(total_score, 3)
+
+        return render_template(
+            "score.html",
+            username=session["username"],
+            testname=session["subject_name"],
+            number=number,
+            question=question,
+            answer_score=answer_score,
+            communication=communication
+        )

@@ -1,0 +1,78 @@
+﻿<html lang="en">
+<head>
+	<title>Automate the examination system</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/form-static/css/util.css">
+	<link rel="stylesheet" type="text/css" href="../static/form-static/css/main.css">
+	<link rel="stylesheet" href="../static/css/style.css">
+	<link rel="stylesheet" href="../static/css/bootstrap.min.css">
+	<script  src="../static/jquery-3.6.0.min.js"></script>
+
+</head>
+<body>
+	<div class="head-space">
+		<h5>Logged in as.. {{username}}</h5>
+	</div>
+	<div class="contact1">
+		<div class="row">
+			<div class="col-md-3 col-sm-0"></div>
+			<div class="col-md-6 col-sm-12">
+				<div class="videocontainer">
+					<video id='qvideo' autoplay >
+						<source src='../static/video/greeting.mp4' type="video/mp4">
+					</video>
+					<!-- <video id='qwait' poster="../static/video/wait.gif" style="display:none" autoplay loop> -->
+					<video id='qwait' poster="../static/video/wait.gif" style="display:none" autoplay loop>
+						<!-- <source src="../static/video/wait.mp4" type="video/mp4"> -->
+					</video>
+					<!-- <img id="wait" style="display:none, width:, height:" src="../static/video/wait.gif"></img> -->
+				</div>
+				<div class="width:100%; contact1new">
+					<form style="color:white" class="contact1-form validate-form" action="/generate_test" method="POST" enctype="multipart/form-data">
+						<div class="container-contact1-form-btn">
+							<button style="margin: 10px 10px;" class="contact1-form-newbtn">
+								<span>Start Test<i class="" aria-hidden="true"></i></span>
+							</button>
+							<a style="margin:10px 10px" href="/" class="contact1-form-newbtn-home">Home</a>
+						</div>
+					</form>
+				</div>
+			</div>
+			<div class="col-md-3 col-sm-0"></div>
+		</div>
+	</div>
+</body>
+
+	<!-- JavaScript -->
+    <script >
+		document.getElementById('qvideo').addEventListener('ended', myHandler, false);
+		function myHandler(e) {
+			// alert("Video Finished");
+			document.getElementById("qvideo").style.display = "none";
+			document.getElementById("qwait").style.display = "block";
+		}
+			$('.js-tilt').tilt({
+				scale: 1.1
+			})
+		
+		function formHandler(){
+			// event handler to handle the name field
+			var nameField = document.getElementById("testname");
+			nameField.onfocus = function(){
+				if(nameField.placeholder == "Test Name"){
+					nameField.placeholder = "";
+				}
+			};
+			nameField.onblur = function(){
+				if(nameField.placeholder == ""){
+					nameField.placeholder = "Test Name";
+				}
+			};
+		}
+		// call fucntion after the window has loaded
+		window.onload = function(){
+			formHandler();
+		}
+	</script>
+</html>

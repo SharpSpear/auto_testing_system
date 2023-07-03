@@ -1,0 +1,303 @@
+<html lang="en">
+
+<head>
+	<title>{{testname}} | {{topicname}}</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/form-static/css/util.css">
+	<link rel="stylesheet" type="text/css" href="../static/form-static/css/main.css">
+	<link rel="stylesheet" href="../static/css/style.css">
+	<link rel="stylesheet" href="../static/css/bootstrap.min.css">
+	<script  src="../static/jquery-3.6.0.min.js"></script>
+
+</head>
+
+<body>
+	<div class="contact2">
+		<div class="row">
+			<div class="col-md-3 col-sm-0"></div>
+			<div class="col-md-6 col-sm-12">
+				<div class="videocontainer">
+					<video id='qvideo' autoplay>
+						<source src="../static/video/{{number}}.mp4" type="video/mp4">
+					</video>
+					<video id='qwait' poster="../static/video/wait.gif" style="display:none" autoplay loop>
+						<!-- <source src="../static/video/wait.mp4" type="video/mp4"> -->
+					</video>
+					<div style="font-size:1em; border:2px solid black; display: none; background-color:black;  width:100%; padding: 2% 5% 1% 5%;" id="overlayText" class="overlayText">
+						<p style="height: 100%; font-size: 1em; padding: 0;" id="topText"></p>
+					</div>
+				</div>
+				<p id="question">{{question}}</p>
+				<style>
+					#question {
+						display: none;
+					}
+				</style>
+
+				<script>
+					var videoElement = document.getElementById("qvideo");
+					videoElement.addEventListener("play", function () {
+						var sentence = document.getElementById("question").innerHTML;
+						var videoElement = document.getElementById("qvideo");
+						var i = 0;
+						document.getElementById('overlayText').style.display = 'block';
+						setInterval(function () {
+							document.getElementById("topText").innerHTML += sentence.charAt(i);
+							i++;
+							if (i == sentence.length) {
+								clearInterval();
+							}
+						}, 50);
+					});
+
+				</script>
+				<div style="margin-top:20px" class="container-contact1-form-btn">
+					<button style="margin: 10px 10px;" id="myBtn" class="contact1-form-btn" onclick="replay()" disabled>
+						<span>Repeat Question<i class="" aria-hidden="true"></i></span>
+					</button>
+					<script>
+						function getConnectedDevices(type, callback) {
+						navigator.mediaDevices.enumerateDevices()
+							.then(devices => {
+								const filtered = devices.filter(device => device.kind === type);
+								callback(filtered);
+							});
+						}
+
+						getConnectedDevices('videoinput', cameras => console.log('Cameras found', cameras));
+						function updateCameraList(cameras) {
+							const listElement = document.querySelector('select#availableCameras');
+							listElement.innerHTML = '';
+							cameras.map(camera => {
+								const cameraOption = document.createElement('option');
+								cameraOption.label = camera.label;
+								cameraOption.value = camera.deviceId;
+							}).forEach(cameraOption => listElement.add(cameraOption));
+						}
+						async function getConnectedDevices(type) {
+							const devices = await navigator.mediaDevices.enumerateDevices();
+							return devices.filter(device => device.kind === type)
+						}
+					</script>
+					<button style="margin: 10px 10px;" class="contact1-form-btn" id="record-button">Record</button>
+					<button style="margin: 10px 10px;" class="contact1-form-btn" id="playButton">Play</button>
+					<script>
+						var recordButton = document.getElementById("record-button");
+						var audioRecording = document.getElementById("audio-recording");
+						var playButton = document.getElementById("playButton");
+						var mediaRecorder;
+						var downloadButton = document.getElementById("downloadButton");
+
+						var leftchannel = [];
+						var rightchannel = [];
+						var recorder = null;
+						var recordingLength = 0;
+						var volume = null;
+						var mediaStream = null;
+						var sampleRate = 44100;
+						var context = null;
+						var blob = null;
+
+						recordButton.onclick = function () {
+							if (!recorder) {
+								navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+								navigator.getUserMedia(
+								{
+									audio: true
+								},
+								function (e) {
+									console.log("user consent");
+
+									// creates the audio context
+									window.AudioContext = window.AudioContext || window.webkitAudioContext;
+									context = new AudioContext();
+
+									// creates an audio node from the microphone incoming stream
+									mediaStream = context.createMediaStreamSource(e);
+
+									// https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/createScriptProcessor
+									// bufferSize: the onaudioprocess event is called when the buffer is full
+									var bufferSize = 2048;
+									var numberOfInputChannels = 2;
+									var numberOfOutputChannels = 2;
+									if (context.createScriptProcessor) {
+										recorder = context.createScriptProcessor(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+									} else {
+										recorder = context.createJavaScriptNode(bufferSize, numberOfInputChannels, numberOfOutputChannels);
+									}
+
+									recorder.onaudioprocess = function (e) {
+										leftchannel.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+										rightchannel.push(new Float32Array(e.inputBuffer.getChannelData(1)));
+										recordingLength += bufferSize;
+									}
+
+									// we connect the recorder
+									mediaStream.connect(recorder);
+									recorder.connect(context.destination);
+								},
+											function (e) {
+												console.error(e);
+											});
+								recordButton.textContent = "Stop Recording";
+							}
+							else {
+								recorder.disconnect(context.destination);
+								mediaStream.disconnect(recorder);
+
+								// we flat the left and right channels down
+								// Float32Array[] => Float32Array
+								var leftBuffer = flattenArray(leftchannel, recordingLength);
+								var rightBuffer = flattenArray(rightchannel, recordingLength);
+								// we interleave both channels together
+								// [left[0],right[0],left[1],right[1],...]
+								var interleaved = interleave(leftBuffer, rightBuffer);
+
+								// we create our wav file
+								var buffer = new ArrayBuffer(44 + interleaved.length * 2);
+								var view = new DataView(buffer);
+
+								// RIFF chunk descriptor
+								writeUTFBytes(view, 0, 'RIFF');
+								view.setUint32(4, 44 + interleaved.length * 2, true);
+								writeUTFBytes(view, 8, 'WAVE');
+								// FMT sub-chunk
+								writeUTFBytes(view, 12, 'fmt ');
+								view.setUint32(16, 16, true); // chunkSize
+								view.setUint16(20, 1, true); // wFormatTag
+								view.setUint16(22, 2, true); // wChannels: stereo (2 channels)
+								view.setUint32(24, sampleRate, true); // dwSamplesPerSec
+								view.setUint32(28, sampleRate * 4, true); // dwAvgBytesPerSec
+								view.setUint16(32, 4, true); // wBlockAlign
+								view.setUint16(34, 16, true); // wBitsPerSample
+								// data sub-chunk
+								writeUTFBytes(view, 36, 'data');
+								view.setUint32(40, interleaved.length * 2, true);
+
+								// write the PCM samples
+								var index = 44;
+								var volume = 1;
+								for (var i = 0; i < interleaved.length; i++) {
+									view.setInt16(index, interleaved[i] * (0x7FFF * volume), true);
+									index += 2;
+								}
+
+								// our final blob
+								blob = new Blob([view], { type: 'audio/wav' });
+								var url = URL.createObjectURL(blob);
+								recordButton.textContent = "Record";
+								recorder = null
+
+								const xhr = new XMLHttpRequest();
+								xhr.open('POST', '/audioprocess');
+								xhr.onreadystatechange = () => {
+								if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+									console.log(xhr.responseText);
+									$('#answer1').val(xhr.responseText);
+								}
+							}
+							xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+							xhr.send(blob);
+							}
+						};
+						playButton.addEventListener("click", function () {
+							if (blob == null) {
+								return;
+							}
+							
+							var url = window.URL.createObjectURL(blob);
+							var durl = URL.createObjectURL(blob);
+							var audio = new Audio(url);
+							audio.play();
+							
+						});
+						downloadButton.addEventListener("click", function () {
+							if (blob == null) {
+								return;
+							}
+
+							var url = URL.createObjectURL(blob);
+
+							var a = document.createElement("a");
+							document.body.appendChild(a);
+							a.style = "display: none";
+							a.href = url;
+							a.download = "sample.wav";
+							a.click();
+							window.URL.revokeObjectURL(url);
+						});
+
+						function flattenArray(channelBuffer, recordingLength) {
+							var result = new Float32Array(recordingLength);
+							var offset = 0;
+							for (var i = 0; i < channelBuffer.length; i++) {
+								var buffer = channelBuffer[i];
+								result.set(buffer, offset);
+								offset += buffer.length;
+							}
+							return result;
+						}
+
+						function interleave(leftChannel, rightChannel) {
+							var length = leftChannel.length + rightChannel.length;
+							var result = new Float32Array(length);
+
+							var inputIndex = 0;
+
+							for (var index = 0; index < length;) {
+								result[index++] = leftChannel[inputIndex];
+								result[index++] = rightChannel[inputIndex];
+								inputIndex++;
+							}
+							return result;
+						}
+
+						function writeUTFBytes(view, offset, string) {
+							for (var i = 0; i < string.length; i++) {
+								view.setUint8(offset + i, string.charCodeAt(i));
+							}
+						}
+
+					</script>
+				</div>
+				<div class="width:100%; contact1new">
+					<form style="width:100%;color:white" class="contact1-form validate-form"
+						action="/estimate" method="POST" enctype="multipart/form-data">
+						<div class="wrap-input1 validate-input" data-validate="">
+							<!-- <h4>{{question1}}</h4> -->
+							<textarea autocomplete="off" class="input1" type="text" name="answer1" id="answer1"
+								placeholder="Descriptive Answer" rows="4" cols="50" style="height: 200px;" readonly></textarea>
+							<span class="shadow-input1"></span>
+						</div>
+						<div class="container-contact1-form-btn">
+							<button class="contact1-form-btn">
+								<span>Submit<i class="" aria-hidden="true"></i></span>
+							</button>
+						</div>
+						<br>
+					</form>
+				</div>
+			</div>
+			<div class="col-md-3 col-sm-0"></div>
+		</div>
+
+	</div>
+</body>
+<script>
+	document.getElementById('qvideo').addEventListener('ended', myHandler, false);
+	function myHandler(e) {
+		// alert("Video Finished");
+		document.getElementById("qvideo").style.display = "none";
+		document.getElementById("qwait").style.display = "block";
+		document.getElementById("myBtn").disabled = false;
+	}
+	function replay() {
+		document.getElementById("qvideo").style.display = "block";
+		document.getElementById("qvideo").play();
+		document.getElementById("qwait").style.display = "none";
+		document.getElementById("topText").innerHTML = ""
+	}
+</script>
+
+</html>
