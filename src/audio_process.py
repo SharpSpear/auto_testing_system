@@ -8,6 +8,7 @@ import webrtcvad
 import pyttsx3
 import os
 
+
 def generate_auido(text):
     print('Audio start')
     engine = pyttsx3.init()
