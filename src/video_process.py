@@ -31,3 +31,5 @@ def merge_with_fade(original, lipsynced):
     subprocess.call(command, shell=platform.system() != 'Windows')
     print('generated outputfile!!!')
     return outfile_path
+
+

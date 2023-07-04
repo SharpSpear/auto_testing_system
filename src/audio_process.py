@@ -38,3 +38,5 @@ def remove_silence(file_name):
     for chunk in audio_chunks:
         combined += chunk
     combined.export(file_name, format = "wav")
+    
+    
