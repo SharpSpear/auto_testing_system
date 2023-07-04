@@ -25,8 +25,8 @@ def generate_auido(text):
     return filename
 
 # Reading and splitting the audio file into chunks
-def remove_silence(filename):
-    sound = AudioSegment.from_file(filename, format = "wav")
+def remove_silence(file_name):
+    sound = AudioSegment.from_file(file_name, format = "wav")
     audio_chunks = split_on_silence(sound
                                 ,min_silence_len = 100
                                 ,silence_thresh = -45
@@ -37,4 +37,4 @@ def remove_silence(filename):
     combined = AudioSegment.empty()
     for chunk in audio_chunks:
         combined += chunk
-    combined.export(filename, format = "wav")
+    combined.export(file_name, format = "wav")
